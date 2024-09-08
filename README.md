@@ -1,9 +1,7 @@
+A [Flow Launcher](https://github.com/Flow-Launcher/Flow.Launcher) plugin to quickly search and open your [Obsidian](https://obsidian.md/) vaults.
 
 > [!WARNING]
 > This is very early version of the plugin, it may not work as expected. 
-
-A [Flow Launcher](https://github.com/Flow-Launcher/Flow.Launcher) plugin to quickly search and open your [Obsidian](https://obsidian.md/) vaults.
-
 
 > [!NOTE] 
 > If you are looking for a plugin to search and open Obsidian **notes**, check out [Obsidian Notes](https://github.com/Garulf/Obsidian-Notes/tree/main) plugin by Garulf. 
