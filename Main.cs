@@ -3,19 +3,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
 using System.Threading;
-using System.Windows.Controls;
-using Flow.Launcher.Plugin;
+using System.Threading.Tasks;
 using System.Diagnostics;
+using Flow.Launcher.Plugin;
+using System.Windows.Input;
 
 namespace Flow.Launcher.Plugin.ObsidianVaults
 {
-    public class Main : IAsyncPlugin, IContextMenu /*, ISettingProvider */
+    public class Main : IAsyncPlugin, IContextMenu
     {
-        private PluginInitContext context;
-        // private Settings settings;
-
         private const string VaultsFileName = "obsidian.json";
         private string vaultsFilePath;
 
@@ -23,87 +20,111 @@ namespace Flow.Launcher.Plugin.ObsidianVaults
         {
             string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             vaultsFilePath = Path.Combine(appDataPath, "obsidian", VaultsFileName);
-
-            this.context = context;
-            // settings = context.API.LoadSettingJsonStorage<Settings>();
             return Task.CompletedTask;
         }
 
         public Task<List<Result>> QueryAsync(Query query, CancellationToken token)
         {
             var results = new List<Result>();
-            var searchTerm = query.Search;
 
             if (!File.Exists(vaultsFilePath))
             {
-                results.Add(new Result
+                return Task.FromResult(new List<Result>
                 {
-                    Title = "Obsidian not found",
-                    SubTitle = "Please make sure Obsidian is installed.",
-                    IcoPath = "Images/app.png"
+                    CreateResult("Obsidian not found", "Please make sure Obsidian is installed.", "Images/icon.png")
                 });
-                return Task.FromResult(results);
             }
 
-            var vaults = GetVaults();
-            if (vaults == null || !vaults.Any())
-            {
-                return Task.FromResult(results);
-            }
+            var vaults = GetVaults() ?? new List<Vault>();
 
-            foreach (var vault in vaults)
-            {
-                if (vault.Name.Contains(query.Search, StringComparison.OrdinalIgnoreCase))
-                {
-                    results.Add(new Result
-                    {
-                        Title = vault.Name,
-                        SubTitle = vault.Path,
-                        IcoPath = "Images/folder.png",
-                        Action = _ =>
-                        {
-                            // Correct the URL format by passing only the vault name
-                            var vaultName = vault.Name; // Assuming vault.Name corresponds to the vault's name
-                            var obsidianUrl = $"obsidian://open?vault={Uri.EscapeDataString(vaultName)}";
-                            System.Diagnostics.Process.Start(new ProcessStartInfo(obsidianUrl) { UseShellExecute = true });
-                            return true;
-                        }
-                    });
-                }
-            }
+            results.AddRange(vaults
+                .Where(vault => vault.Name.Contains(query.Search, StringComparison.OrdinalIgnoreCase))
+                .Select(vault => CreateVaultResult(vault))
+            );
 
             return Task.FromResult(results);
         }
 
-        // Function to read vaults from the obsidian.json file using System.Text.Json
+        public List<Result> LoadContextMenus(Result selectedResult)
+        {
+            if (selectedResult.ContextData is Vault vault)
+            {
+                return new List<Result>
+                {
+                    CreateContextMenu("Open Folder", "Images/folder.png", () => OpenFolder(vault.Path)),
+                    CreateContextMenu("Open in Obsidian", "Images/icon.png", () => OpenObsidian(vault.Name))
+                };
+            }
+
+            return new List<Result>();
+        }
+
+        private Result CreateVaultResult(Vault vault)
+        {
+            return CreateResult(vault.Name, vault.Path, "Images/icon.png", vault, _ =>
+            {
+                if (_.SpecialKeyState.ToModifierKeys() == ModifierKeys.Control)
+                {
+                    OpenFolder(vault.Path);
+                }
+                else
+                {
+                    OpenObsidian(vault.Name);
+                }
+                return true;
+            });
+        }
+
+        private static Result CreateResult(string title, string subTitle, string iconPath, object contextData = null, Func<ActionContext, bool> action = null)
+        {
+            return new Result
+            {
+                Title = title,
+                SubTitle = subTitle,
+                IcoPath = iconPath,
+                ContextData = contextData,
+                Action = action
+            };
+        }
+
+        private static Result CreateContextMenu(string title, string iconPath, Func<bool> action)
+        {
+            return new Result
+            {
+                Title = title,
+                IcoPath = iconPath,
+                Action = _ => action()
+            };
+        }
+
+        private bool OpenFolder(string path)
+        {
+            Process.Start("explorer.exe", path);
+            return true;
+        }
+
+        private bool OpenObsidian(string vaultName)
+        {
+            var obsidianUrl = $"obsidian://open?vault={Uri.EscapeDataString(vaultName)}";
+            Process.Start(new ProcessStartInfo(obsidianUrl) { UseShellExecute = true });
+            return true;
+        }
+
         private List<Vault> GetVaults()
         {
             try
             {
                 var jsonData = File.ReadAllText(vaultsFilePath);
-                var vaults = new List<Vault>();
 
-                // Parse the JSON data
-                using (JsonDocument document = JsonDocument.Parse(jsonData))
-                {
-                    JsonElement root = document.RootElement;
-                    if (root.TryGetProperty("vaults", out JsonElement vaultsElement))
-                    {
-                        foreach (JsonProperty vault in vaultsElement.EnumerateObject())
-                        {
-                            if (vault.Value.TryGetProperty("path", out JsonElement pathElement))
-                            {
-                                var path = pathElement.GetString();
-                                if (!string.IsNullOrEmpty(path))
-                                {
-                                    vaults.Add(new Vault { Name = Path.GetFileName(path), Path = path });
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return vaults;
+                using var document = JsonDocument.Parse(jsonData);
+                return document.RootElement.TryGetProperty("vaults", out var vaultsElement)
+                    ? vaultsElement.EnumerateObject()
+                        .Select(vault => vault.Value.TryGetProperty("path", out var pathElement) && !string.IsNullOrEmpty(pathElement.GetString())
+                            ? new Vault { Name = Path.GetFileName(pathElement.GetString()), Path = pathElement.GetString() }
+                            : null)
+                        .Where(vault => vault != null)
+                        .ToList()
+                    : new List<Vault>();
             }
             catch (Exception ex)
             {
@@ -112,22 +133,12 @@ namespace Flow.Launcher.Plugin.ObsidianVaults
             }
         }
 
-        // Vault class to hold vault information
         private class Vault
         {
             public string Name { get; set; }
             public string Path { get; set; }
         }
 
-        public void Dispose()
-        {
-        }
-
-        // public Control CreateSettingPanel() => new SettingsControl(settings);
-
-        public List<Result> LoadContextMenus(Result selectedResult)
-        {
-            return new List<Result>();
-        }
+        public void Dispose() { }
     }
 }

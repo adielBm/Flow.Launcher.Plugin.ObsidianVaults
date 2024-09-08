@@ -1,5 +1,6 @@
 $PluginJson = Get-Content -Raw -Path '.\plugin.json' | ConvertFrom-Json
-$Name = $PluginJson.Name # ObsidianVaults
+$Name = $PluginJson.Name # Obsidian Vaults
+$Name = $Name -replace ' ', '' # ObsidianVaults
 $Version = $PluginJson.Version # x.x.x
 $NameVer = "$Name-$Version" # ObsidianVaults-x.x.x
 $ActionKeyword = $PluginJson.ActionKeyword
