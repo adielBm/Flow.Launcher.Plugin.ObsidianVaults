@@ -15,10 +15,10 @@ A [Flow Launcher](https://github.com/Flow-Launcher/Flow.Launcher) plugin to quic
 
 ## Installation
 
-currently, the plugin is not available in the Flow Launcher plugin store.
+currently, the plugin is not available in the Flow Launcher plugin store. you can install it manually by running the following command in Flow Launcher:
 
 ```
-pm install [path to the plugin folder zip file]
+pm install https://github.com/adielBm/Flow.Launcher.Plugin.ObsidianVaults/releases/latest/download/Flow.Launcher.Plugin.ObsidianVaults.zip
 ```
 
 ## Screenshot
