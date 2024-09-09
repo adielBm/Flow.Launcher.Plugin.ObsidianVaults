@@ -5,7 +5,7 @@ A [Flow Launcher](https://github.com/Flow-Launcher/Flow.Launcher) plugin to quic
 
 > [!NOTE] 
 > If you are looking for a plugin to search and open Obsidian **notes**, check out [Obsidian Notes](https://github.com/Garulf/Obsidian-Notes/tree/main) plugin by Garulf. 
-> If you are looking for a plugin to search and open Obsidian **plugins**, check out https://github.com/joethei/Flow-ObsidianPluginSearch plugin.
+> If you are looking for a plugin to search Obsidian **plugins**, check out https://github.com/joethei/Flow-ObsidianPluginSearch plugin.
 
 ## Features
 
